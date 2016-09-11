@@ -19,6 +19,9 @@ public:
 public slots:
     void receiveMsg(QString msg);
 
+private slots:
+    void serverStatusChanged(int status);
+
 private:
     Ui::RT3DUSrenderingGUI *ui;
 

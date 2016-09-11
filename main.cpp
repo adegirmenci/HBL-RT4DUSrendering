@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     RT3DUSrenderingGUI w;
 
     w.show();
+    w.windowHandle()->setTitle("Volume Rendering GUI");
 
     return a.exec();
 }

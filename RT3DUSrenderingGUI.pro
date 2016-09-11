@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -14,12 +14,15 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         rt3dusrenderinggui.cpp \
-    extdopenglwidget.cpp
+    extdopenglwidget.cpp \
+    volumeserverwidget.cpp
 
 HEADERS  += rt3dusrenderinggui.h \
-    extdopenglwidget.h
+    extdopenglwidget.h \
+    volumeserverwidget.h
 
-FORMS    += rt3dusrenderinggui.ui
+FORMS    += rt3dusrenderinggui.ui \
+    volumeserverwidget.ui
 
 RC_FILE = RT3DUSrenderingGUI.rc
 
