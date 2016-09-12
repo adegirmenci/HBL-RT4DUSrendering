@@ -22,6 +22,7 @@ ExtdOpenGLwidget::ExtdOpenGLwidget(QOpenGLWindow::UpdateBehavior updateBehavior,
     m_cudaParams.gridSize =  dim3(
                 iDivUp(m_paintParams.width, m_cudaParams.blockSize.x),
                 iDivUp(m_paintParams.height, m_cudaParams.blockSize.y));
+    m_cudaParams.initializedOnce = false;
 
     m_raytraceParams.linearFiltering =  true;
     m_raytraceParams.density         =  0.18f;
@@ -39,22 +40,27 @@ ExtdOpenGLwidget::ExtdOpenGLwidget(QOpenGLWindow::UpdateBehavior updateBehavior,
 
     m_mouseParams.ox = 0;
     m_mouseParams.oy = 0;
-    m_mouseParams.buttonState = 0;
+    m_mouseParams.buttonState = Qt::NoButton;
 
     m_viewportParams.viewTranslation = make_float3(0.0, 0.0, -4.0f);
+    m_viewportParams.viewRotation = make_float3(0.0, 0.0, 0.0);
+
+    m_volumeParams.volumeFilename = tr("");
+    m_volumeParams.volumeSize = make_cudaExtent(0,0,0);
+    m_volumeParams.volumeLoaded = false;
 
     printf("ExtdOpenGLWidget initialized.\n");
 
     sdkCreateTimer(&m_fpsParams.timer);
 
     show();
+    update();
 }
 
 
 ExtdOpenGLwidget::~ExtdOpenGLwidget()
 {
-
-
+    //cleanup();
     std::cout << "BYEBYE" << std::endl;
 }
 
@@ -124,7 +130,10 @@ void ExtdOpenGLwidget::paintGL()
                 m_paintParams.currFrameIdx % m_paintParams.nTimeFrames;
     }
 
-//    sdkStartTimer(&m_fpsParams.timer);
+    if( (!m_pbo) || (!m_volumeParams.volumeLoaded))
+        return;
+
+    sdkStartTimer(&m_fpsParams.timer);
 
     // use OpenGL to build view matrix
     GLfloat modelView[16];
@@ -178,14 +187,22 @@ void ExtdOpenGLwidget::paintGL()
     // draw textured quad
     glEnable(GL_TEXTURE_2D);
     glBegin(GL_QUADS);
+//    glTexCoord2f(0, 0);
+//    glVertex2f(0, 0);
+//    glTexCoord2f(1, 0);
+//    glVertex2f(1, 0);
+//    glTexCoord2f(1, 1);
+//    glVertex2f(1, 1);
+//    glTexCoord2f(0, 1);
+//    glVertex2f(0, 1);
     glTexCoord2f(0, 0);
-    glVertex2f(0, 0);
+    glVertex2f(-1, -1);
     glTexCoord2f(1, 0);
-    glVertex2f(1, 0);
+    glVertex2f(1, -1);
     glTexCoord2f(1, 1);
     glVertex2f(1, 1);
     glTexCoord2f(0, 1);
-    glVertex2f(0, 1);
+    glVertex2f(-1, 1);
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
@@ -194,11 +211,9 @@ void ExtdOpenGLwidget::paintGL()
 //    glutSwapBuffers();
 //    glutReportErrors();
 
-//    sdkStopTimer(&m_fpsParams.timer);
+    sdkStopTimer(&m_fpsParams.timer);
 
-
-
-//    computeFPS();
+    computeFPS();
     //swapBuffers(); http://doc.qt.io/qt-5/qopenglwidget.html#Threading
 }
 
@@ -248,42 +263,216 @@ void ExtdOpenGLwidget::initPixelBuffer()
 
 void ExtdOpenGLwidget::computeFPS()
 {
+    m_fpsParams.frameCount++;
+    m_fpsParams.fpsCount++;
+
+    if (m_fpsParams.fpsCount == m_fpsParams.fpsLimit)
+    {
+        // char fps[256];
+        float ifps = 1.f / (sdkGetAverageTimerValue(&m_fpsParams.timer) / 1000.f);
+        // sprintf(fps, "Volume Render: %3.1f fps, currFrame %d", ifps, currFrame);
+
+        // glutSetWindowTitle(fps);
+        m_fpsParams.fpsCount = 0;
+
+        m_fpsParams.fpsLimit = (int)MAX(1.f, ifps);
+        sdkResetTimer(&m_fpsParams.timer);
+    }
+
      emit broadcastFPS(m_fpsParams.fpsCount);
 }
 
 void ExtdOpenGLwidget::render()
 {
+    if(!m_volumeParams.volumeLoaded)
+        return;
 
+    copyInvViewMatrix(m_viewportParams.invViewMatrix, sizeof(float4)*3);
+
+    // map PBO to get CUDA device pointer
+    uint *d_output;
+    // map PBO to get CUDA device pointer
+    checkCudaErrors(cudaGraphicsMapResources(1, &m_cuda_pbo_resource, 0));
+    size_t num_bytes;
+    checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&d_output,
+                                                         &num_bytes,
+                                                         m_cuda_pbo_resource));
+    //printf("CUDA mapped PBO: May access %ld bytes\n", num_bytes);
+
+    // clear image
+    checkCudaErrors(cudaMemset(d_output, 0,
+                               m_paintParams.width*m_paintParams.height*4));
+
+    // call CUDA kernel, writing results to PBO
+    render_kernel(m_cudaParams.gridSize,
+                  m_cudaParams.blockSize,
+                  d_output,
+                  m_paintParams.width,
+                  m_paintParams.height,
+                  m_raytraceParams.density,
+                  m_raytraceParams.brightness,
+                  m_raytraceParams.transferOffset,
+                  m_raytraceParams.transferScale,
+                  m_raytraceParams.lowerThresh,
+                  m_paintParams.currFrameIdx);
+
+    getLastCudaError("kernel failed");
+
+    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_cuda_pbo_resource, 0));
 }
 
 void ExtdOpenGLwidget::keyPressEvent(QKeyEvent *_event)
 {
+    _event->accept();
 
+    switch (_event->key())
+    {
+        case Qt::Key_Escape:
+            close();
+            return;
+            break;
+
+        case Qt::Key_F:
+            m_raytraceParams.linearFiltering = !m_raytraceParams.linearFiltering;
+            setTextureFilterMode(m_raytraceParams.linearFiltering);
+            break;
+
+        case Qt::Key_Plus:
+            m_raytraceParams.density += 0.01f;
+            break;
+
+        case Qt::Key_Minus:
+            m_raytraceParams.density -= 0.01f;
+            break;
+
+        case Qt::Key_BracketRight:
+            m_raytraceParams.brightness += 0.1f;
+            break;
+
+        case Qt::Key_BracketLeft:
+            m_raytraceParams.brightness -= 0.1f;
+            break;
+
+        case Qt::Key_Semicolon:
+            m_raytraceParams.transferOffset += 0.01f;
+            break;
+
+        case Qt::Key_Backslash:
+            m_raytraceParams.transferOffset -= 0.01f;
+            break;
+
+        case Qt::Key_Period:
+            m_raytraceParams.transferScale += 0.01f;
+            break;
+
+        case Qt::Key_Comma:
+            m_raytraceParams.transferScale -= 0.01f;
+            break;
+
+        case Qt::Key_M:
+            m_raytraceParams.lowerThresh += 0.01f;
+            break;
+
+        case Qt::Key_N:
+            m_raytraceParams.lowerThresh -= 0.01f;
+            break;
+
+        case Qt::Key_A:
+            m_viewportParams.viewRotation.z += 25 / 5.0f;
+            break;
+
+        case Qt::Key_D:
+            m_viewportParams.viewRotation.z -= 25 / 5.0f;
+            break;
+
+        case Qt::Key_W:
+            m_viewportParams.viewRotation.y += 25 / 5.0f;
+            break;
+
+        case Qt::Key_S:
+            m_viewportParams.viewRotation.y -= 25 / 5.0f;
+            break;
+
+        case Qt::Key_Q:
+            m_viewportParams.viewRotation.x += 25 / 5.0f;
+            break;
+
+        case Qt::Key_E:
+            m_viewportParams.viewRotation.x -= 25 / 5.0f;
+            break;
+
+        default:
+            break;
+    }
+    update();
 }
 
 void ExtdOpenGLwidget::mouseMoveEvent(QMouseEvent *_event)
 {
+    _event->accept();
 
+    float dx, dy;
+    dx = (float)(_event->screenPos().x() - m_mouseParams.ox);
+    dy = (float)(_event->screenPos().y() - m_mouseParams.oy);
+
+    if (m_mouseParams.buttonState == Qt::RightButton)
+    {
+        // right = zoom
+        m_viewportParams.viewTranslation.z += dy / 100.0f;
+    }
+    else if (m_mouseParams.buttonState == Qt::MidButton)
+    {
+        // middle = translate
+        m_viewportParams.viewTranslation.x += dx / 100.0f;
+        m_viewportParams.viewTranslation.y -= dy / 100.0f;
+    }
+    else if (m_mouseParams.buttonState == Qt::LeftButton)
+    {
+        // left = rotate
+
+        m_viewportParams.viewRotation.x += dy / 5.0f;
+        m_viewportParams.viewRotation.y += dx / 5.0f;
+    }
+
+    m_mouseParams.ox = _event->screenPos().x();
+    m_mouseParams.oy = _event->screenPos().y();
+
+    update();
 }
 
 void ExtdOpenGLwidget::mouseReleaseEvent(QMouseEvent *_event)
 {
+    _event->accept();
 
+    m_mouseParams.buttonState = Qt::NoButton;
+
+    m_mouseParams.ox = _event->screenPos().x();
+    m_mouseParams.oy = _event->screenPos().y();
+
+    update();
 }
 
 void ExtdOpenGLwidget::mousePressEvent(QMouseEvent *_event)
 {
+    _event->accept();
 
+    m_mouseParams.buttonState = _event->button();
+
+    m_mouseParams.ox = _event->screenPos().x();
+    m_mouseParams.oy = _event->screenPos().y();
+
+    update();
 }
 
 void ExtdOpenGLwidget::wheelEvent(QWheelEvent *_event)
 {
-
+    _event->accept();
+    //update();
 }
 
-void ExtdOpenGLwidget::timerEvent(QTimerEvent *)
+void ExtdOpenGLwidget::timerEvent(QTimerEvent *_event)
 {
-
+    _event->accept();
 }
 
 int ExtdOpenGLwidget::chooseCudaDevice(bool bUseOpenGL)
@@ -341,5 +530,90 @@ void ExtdOpenGLwidget::cleanup()
 
 void ExtdOpenGLwidget::loadVolume(QString _loc)
 {
+    std::cout << "Loading volume." << std::endl;
+    m_volumeParams.volumeLoaded = false;
+
+    m_volumeParams.volumeFilename = _loc;
+
+    QFile txtfile(_loc + tr("_vol_1.txt"));
+    if (txtfile.open(QFile::ReadOnly)) {
+        QTextStream txtin(&txtfile);
+        txtin >> m_volumeParams.volumeSize.width
+                >> m_volumeParams.volumeSize.height
+                >> m_volumeParams.volumeSize.depth;
+        txtfile.close();
+    }
+    else
+    {
+        printf("Error opening txt file: %s!", (_loc + tr("_vol_1.txt")).toStdString().c_str());
+        return;
+    }
+
+    size_t size = m_volumeParams.volumeSize.width
+                 *m_volumeParams.volumeSize.height
+                 *m_volumeParams.volumeSize.depth;
+
+    if(h_volume.size() > 0)
+    {
+        for(void * a : h_volume)
+            free(a);
+    }
+
+
+    for(size_t i = 0; i < m_paintParams.nTimeFrames; i++)
+    {
+        FILE *fp = fopen((_loc+tr("_vol_%1.raw").arg(i+1)).toStdString().c_str(), "rb");
+
+        if (!fp)
+        {
+            fprintf(stderr, "Error opening file '%s'\n",
+                            (_loc+tr(".raw")).toStdString().c_str());
+            return;
+        }
+
+        void *dat_ = malloc(size);
+
+        size_t read = fread(dat_, 1, size, fp);
+        fclose(fp);
+
+        h_volume.push_back(dat_);
+
+        printf("Read '%s', %d bytes\n",
+               (_loc+tr("_vol_%1.raw").arg(i+1)).toStdString().c_str(),
+               read);
+        std::cout << std::endl;
+    }
+
+
+    if(m_cudaParams.initializedOnce)
+    {
+        std::cout << "Reinitializing CUDA params." << std::endl;
+        //makeCurrent();
+//        if (m_pbo)
+//        {
+//            // unregister this buffer object from CUDA C
+//            checkCudaErrors(cudaGraphicsUnregisterResource(m_cuda_pbo_resource));
+
+//            // delete old buffer
+//            glDeleteBuffers(1, &m_pbo);
+//            glDeleteTextures(m_paintParams.nTimeFrames, m_texArray);
+//            m_pbo = 0;
+//        }
+        initPixelBuffer();
+        //doneCurrent();
+        std::cout << "Calling reinitCuda()..." << std::endl;
+        reinitCuda(&h_volume[0], m_volumeParams.volumeSize);
+        std::cout << "reinitCuda() success." << std::endl;
+    }
+    else
+    {
+        initCuda(&h_volume[0], m_volumeParams.volumeSize);
+        m_cudaParams.initializedOnce = true;
+    }
+
+    m_volumeParams.volumeLoaded = true;
+    std::cout << "m_volumeParams.volumeLoaded = true" << std::endl;
+
+
 
 }

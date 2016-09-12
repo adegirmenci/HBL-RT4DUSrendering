@@ -33,7 +33,7 @@ public:
     explicit VolumeServerWidget(QWidget *parent = 0);
     ~VolumeServerWidget();
 signals:
-    void statusChanged(int event);
+    void  statusChanged(int event);
     void  tcpError(QAbstractSocket::SocketError error);
     void  newVolumeReceived(QString volume); // change this to Frame type
 

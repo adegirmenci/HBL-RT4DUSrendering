@@ -21,7 +21,10 @@ RT3DUSrenderingGUI::RT3DUSrenderingGUI(QWidget *parent) :
 
     ui->SEASlogo->setPixmap(QPixmap("C:\\Users\\Alperen\\Documents\\QT Projects\\RT3DUSrenderingGUI\\SEASLogo.png"));
 
-    connect(ui->volRenderWidget, SIGNAL(statusChanged(int)), this, SLOT(serverStatusChanged(int)));
+    connect(ui->volumeServerWidget, SIGNAL(statusChanged(int)),
+            this, SLOT(serverStatusChanged(int)));
+    connect(ui->volumeServerWidget, SIGNAL(newVolumeReceived(QString)),
+            m_glwidget, SLOT(loadVolume(QString)));
 }
 
 RT3DUSrenderingGUI::~RT3DUSrenderingGUI()

@@ -14,6 +14,13 @@
 #ifndef _VOLUMERENDER_KERNEL_CU_
 #define _VOLUMERENDER_KERNEL_CU_
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <iostream>
+//#include <cuda.h>
+//#include <cuda_runtime.h>
+//#include <device_launch_parameters.h>
+
 #include <helper_cuda.h>
 #include <helper_math.h>
 
@@ -283,6 +290,51 @@ void initCuda(void **h_volume, cudaExtent volumeSize)
 
     // Bind the array to the texture
     checkCudaErrors(cudaBindTextureToArray(transferTex, d_transferFuncArray, channelDesc2));
+}
+
+extern "C"
+void reinitCuda(void **h_volume, cudaExtent volumeSize)
+{
+    // free old mem
+    for (int i = 0; i < nTimeFrames; ++i)
+    {
+        std::cout << "Trying to free array..." << std::endl;
+        checkCudaErrors(cudaFreeArray(d_volumeArray[i]));
+        std::cout << "Success." << std::endl;
+    }
+    // allocate new mem
+    for (unsigned int i = 0; i < nTimeFrames; ++i)
+    {
+        std::cout << "Loading " << i << std::endl;
+        //printf("Loading %d...", i);
+        // create 3D array
+        channelDesc = cudaCreateChannelDesc<VolumeType>();
+        checkCudaErrors(cudaMalloc3DArray(&d_volumeArray[i], &channelDesc, volumeSize));
+        //printf("Malloc success...");
+        std::cout << "Malloc success... " << std::endl;
+    }
+    for (unsigned int i = 0; i < nTimeFrames; ++i)
+    {
+        // copy data to 3D array
+        cudaMemcpy3DParms copyParams = {0};
+        copyParams.srcPtr   = make_cudaPitchedPtr(h_volume[i], volumeSize.width*sizeof(VolumeType), volumeSize.width, volumeSize.height);
+        copyParams.dstArray = d_volumeArray[i];
+        copyParams.extent   = volumeSize;
+        copyParams.kind     = cudaMemcpyHostToDevice;
+        //printf("Copying data...", i);
+        std::cout << "Copying data... " << std::endl;
+        checkCudaErrors(cudaMemcpy3D(&copyParams));
+        std::cout << "Loaded " << i << std::endl;
+        //printf("Loaded %d.\n", i);
+    }
+    // set texture parameters
+    tex.normalized = true;                      // access with normalized texture coordinates
+    tex.filterMode = cudaFilterModeLinear;      // linear interpolation
+    tex.addressMode[0] = cudaAddressModeClamp;  // clamp texture coordinates
+    tex.addressMode[1] = cudaAddressModeClamp;
+
+    // bind array to 3D texture - we'll need to do a texture bind cyclically
+    checkCudaErrors(cudaBindTextureToArray(tex, d_volumeArray[0], channelDesc));
 }
 
 extern "C"

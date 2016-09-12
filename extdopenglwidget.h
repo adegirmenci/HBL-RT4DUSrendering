@@ -14,6 +14,11 @@
 #include <QOpenGLWindow>
 #include <QOpenGLFunctions>
 
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QWheelEvent>
+#include <QTimerEvent>
+
 // CUDA Runtime, Interop, and includes
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
@@ -44,6 +49,9 @@ extern "C"
 void initCuda(void **h_volume, cudaExtent volumeSize);
 
 extern "C"
+void reinitCuda(void **h_volume, cudaExtent volumeSize);
+
+extern "C"
 void freeCudaBuffers();
 
 extern "C"
@@ -72,11 +80,13 @@ struct PaintParams {
 struct CudaParams {
     dim3 blockSize;
     dim3 gridSize;
+    bool initializedOnce;
 };
 
 struct VolumeParams {
-    cudaExtent m_volumeSize;
-    QString m_volumeFilename;
+    cudaExtent volumeSize;
+    QString volumeFilename;
+    bool volumeLoaded;
 };
 
 struct ViewportParams {
@@ -96,7 +106,7 @@ struct FPSparams {
 
 struct MouseParams {
     int ox, oy;
-    int buttonState;
+    Qt::MouseButton buttonState;
 };
 
 
@@ -121,7 +131,7 @@ public:
     void mouseReleaseEvent(QMouseEvent *_event);
     void mousePressEvent(QMouseEvent *_event);
     void wheelEvent(QWheelEvent *_event);
-    void timerEvent(QTimerEvent *);
+    void timerEvent(QTimerEvent *_event);
 
     int iDivUp(int a, int b) {return (a % b != 0) ? (a / b + 1) : (a / b); }
     int chooseCudaDevice(bool bUseOpenGL);
@@ -143,10 +153,14 @@ private:
     ViewportParams m_viewportParams;
     FPSparams m_fpsParams;
     MouseParams m_mouseParams;
+    VolumeParams m_volumeParams;
 
     QTime m_currentTime;
 
     QOpenGLWindow *win;
+
+    //std::vector<uchar> h_volume;
+    std::vector<void *> h_volume;
 
     //QOpenGLBuffer m_pbo;
     //QOpenGLTexture m_texArray;

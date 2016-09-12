@@ -357,7 +357,7 @@
     <property name="title">
      <string>Volume Server</string>
     </property>
-    <widget class="VolumeServerWidget" name="volRenderWidget" native="true">
+    <widget class="VolumeServerWidget" name="volumeServerWidget" native="true">
      <property name="geometry">
       <rect>
        <x>5</x>
