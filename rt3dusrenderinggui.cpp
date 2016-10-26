@@ -25,6 +25,14 @@ RT3DUSrenderingGUI::RT3DUSrenderingGUI(QWidget *parent) :
             this, SLOT(serverStatusChanged(int)));
     connect(ui->volumeServerWidget, SIGNAL(newVolumeReceived(QString)),
             m_glwidget, SLOT(loadVolume(QString)));
+
+    connect(this, SIGNAL(sliderAction(int,double)),
+            m_glwidget, SLOT(sliderAction(int,double)));
+    connect(this, SIGNAL(loadVolume(QString)),
+            m_glwidget, SLOT(loadVolume(QString)));
+
+    connect(ui->actionLoad_Volume, SIGNAL(triggered(bool)),
+            this, SLOT(loadVolumeClicked()));
 }
 
 RT3DUSrenderingGUI::~RT3DUSrenderingGUI()
@@ -69,4 +77,75 @@ void RT3DUSrenderingGUI::serverStatusChanged(int status)
     default:
         ui->statusTextEdit->appendPlainText("Unknown server state.");
     }
+}
+
+void RT3DUSrenderingGUI::on_xRotSlider_valueChanged(int value)
+{
+    emit sliderAction(REND_SLIDER_X, value);
+}
+
+void RT3DUSrenderingGUI::on_yRotSlider_valueChanged(int value)
+{
+    emit sliderAction(REND_SLIDER_Y, value);
+}
+
+void RT3DUSrenderingGUI::on_zRotSlider_valueChanged(int value)
+{
+    emit sliderAction(REND_SLIDER_Z, value);
+}
+
+void RT3DUSrenderingGUI::on_lowerThreshSlider_valueChanged(int value)
+{
+    if(value > ui->upperThreshSlider->value())
+    {
+        ui->upperThreshSlider->setValue(value);
+        emit sliderAction(REND_SLIDER_HI_THRESH, value*0.1);
+    }
+    emit sliderAction(REND_SLIDER_LO_THRESH, value*0.1);
+}
+
+void RT3DUSrenderingGUI::on_upperThreshSlider_valueChanged(int value)
+{
+    if(value < ui->lowerThreshSlider->value())
+    {
+        ui->lowerThreshSlider->setValue(value);
+        emit sliderAction(REND_SLIDER_LO_THRESH, value*0.1);
+    }
+    emit sliderAction(REND_SLIDER_HI_THRESH, value*0.1);
+}
+
+void RT3DUSrenderingGUI::on_transferoffsetSlider_valueChanged(int value)
+{
+    emit sliderAction(REND_SLIDER_TFR_OFF, value*0.1);
+}
+
+void RT3DUSrenderingGUI::on_transferScaleSlider_valueChanged(int value)
+{
+    emit sliderAction(REND_SLIDER_TFR_SCL, value*0.1);
+}
+
+void RT3DUSrenderingGUI::on_densitySlider_valueChanged(int value)
+{
+    emit sliderAction(REND_SLIDER_DEN, value*0.1);
+}
+
+void RT3DUSrenderingGUI::on_brightnessSlider_valueChanged(int value)
+{
+    emit sliderAction(REND_SLIDER_BRI, value*0.1);
+}
+
+void RT3DUSrenderingGUI::on_linFiltCheckBox_toggled(bool checked)
+{
+    emit sliderAction(REND_SLIDER_LINFILT, checked*1.0);
+}
+
+void RT3DUSrenderingGUI::loadVolumeClicked()
+{
+    QString file = QFileDialog::getOpenFileName(this, tr("Choose Volume File"),
+                                               "../",
+                                               tr("3D Volume Definition (*.txt)"));;
+
+    ui->statusTextEdit->appendPlainText(file);
+
+    emit loadVolume(file.left(file.length()-10));
 }

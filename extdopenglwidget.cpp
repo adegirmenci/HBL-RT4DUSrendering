@@ -55,6 +55,7 @@ ExtdOpenGLwidget::ExtdOpenGLwidget(QOpenGLWindow::UpdateBehavior updateBehavior,
 
     show();
     update();
+
 }
 
 
@@ -353,11 +354,11 @@ void ExtdOpenGLwidget::keyPressEvent(QKeyEvent *_event)
             m_raytraceParams.brightness -= 0.1f;
             break;
 
-        case Qt::Key_Semicolon:
+        case Qt::Key_Apostrophe:
             m_raytraceParams.transferOffset += 0.01f;
             break;
 
-        case Qt::Key_Backslash:
+        case Qt::Key_Semicolon:
             m_raytraceParams.transferOffset -= 0.01f;
             break;
 
@@ -616,4 +617,55 @@ void ExtdOpenGLwidget::loadVolume(QString _loc)
 
 
 
+}
+
+void ExtdOpenGLwidget::sliderAction(int actID, double val)
+{
+    switch(actID)
+    {
+    case REND_SLIDER_X:
+        m_viewportParams.viewRotation.z = val;
+        break;
+
+    case REND_SLIDER_Y:
+        m_viewportParams.viewRotation.y = val;
+        break;
+
+    case REND_SLIDER_Z:
+        m_viewportParams.viewRotation.x = val;
+        break;
+
+    case REND_SLIDER_DEN:
+        m_raytraceParams.density = val;
+        break;
+
+    case REND_SLIDER_BRI:
+        m_raytraceParams.brightness = val;
+        break;
+
+    case REND_SLIDER_TFR_OFF:
+        m_raytraceParams.transferOffset = val;
+        break;
+
+    case REND_SLIDER_TFR_SCL:
+        m_raytraceParams.transferScale = val;
+        break;
+
+    case REND_SLIDER_LO_THRESH:
+        m_raytraceParams.lowerThresh = val;
+        break;
+
+    case REND_SLIDER_LINFILT:
+        if(val > 0.5)
+            m_raytraceParams.linearFiltering = true;
+        else
+            m_raytraceParams.linearFiltering = false;
+        setTextureFilterMode(m_raytraceParams.linearFiltering);
+        break;
+
+    default:
+        break;
+    }
+
+update();
 }

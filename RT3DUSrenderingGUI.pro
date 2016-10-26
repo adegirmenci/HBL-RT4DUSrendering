@@ -19,7 +19,8 @@ SOURCES += main.cpp\
 
 HEADERS  += rt3dusrenderinggui.h \
     extdopenglwidget.h \
-    volumeserverwidget.h
+    volumeserverwidget.h \
+    rt3dus_definitions.h
 
 FORMS    += rt3dusrenderinggui.ui \
     volumeserverwidget.ui

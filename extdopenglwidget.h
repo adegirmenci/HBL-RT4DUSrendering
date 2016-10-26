@@ -35,6 +35,8 @@
 #include <helper_functions.h>
 #include <helper_timer.h>
 
+#include "rt3dus_definitions.h"
+
 typedef unsigned int uint;
 typedef unsigned char uchar;
 typedef unsigned char VolumeType;
@@ -145,6 +147,8 @@ public slots:
 
     void loadVolume(QString _loc);
     void setDensity(float _den) { m_raytraceParams.density = _den; }
+
+    void sliderAction(int actID, double val);
 
 private:
     RaytraceParams m_raytraceParams;
