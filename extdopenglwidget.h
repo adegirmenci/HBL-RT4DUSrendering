@@ -13,6 +13,7 @@
 #include <QDebug>
 #include <QOpenGLWindow>
 #include <QOpenGLFunctions>
+#include <QWindow>
 
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -161,7 +162,7 @@ private:
 
     QTime m_currentTime;
 
-    QOpenGLWindow *win;
+    //QOpenGLWindow *win;
 
     //std::vector<uchar> h_volume;
     std::vector<void *> h_volume;

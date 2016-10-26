@@ -468,7 +468,10 @@ void ExtdOpenGLwidget::mousePressEvent(QMouseEvent *_event)
 void ExtdOpenGLwidget::wheelEvent(QWheelEvent *_event)
 {
     _event->accept();
-    //update();
+
+    m_viewportParams.viewTranslation.z += _event->delta() / 120.0f;
+
+    update();
 }
 
 void ExtdOpenGLwidget::timerEvent(QTimerEvent *_event)
@@ -568,7 +571,7 @@ void ExtdOpenGLwidget::loadVolume(QString _loc)
         if (!fp)
         {
             fprintf(stderr, "Error opening file '%s'\n",
-                            (_loc+tr(".raw")).toStdString().c_str());
+                            (_loc+tr("_vol_%1.raw").arg(i+1)).toStdString().c_str());
             return;
         }
 
@@ -589,7 +592,9 @@ void ExtdOpenGLwidget::loadVolume(QString _loc)
     if(m_cudaParams.initializedOnce)
     {
         std::cout << "Reinitializing CUDA params." << std::endl;
-        //makeCurrent();
+
+//        makeCurrent();
+
 //        if (m_pbo)
 //        {
 //            // unregister this buffer object from CUDA C
@@ -600,8 +605,10 @@ void ExtdOpenGLwidget::loadVolume(QString _loc)
 //            glDeleteTextures(m_paintParams.nTimeFrames, m_texArray);
 //            m_pbo = 0;
 //        }
-        initPixelBuffer();
-        //doneCurrent();
+//        initPixelBuffer();
+
+//        doneCurrent();
+
         std::cout << "Calling reinitCuda()..." << std::endl;
         reinitCuda(&h_volume[0], m_volumeParams.volumeSize);
         std::cout << "reinitCuda() success." << std::endl;
@@ -615,8 +622,7 @@ void ExtdOpenGLwidget::loadVolume(QString _loc)
     m_volumeParams.volumeLoaded = true;
     std::cout << "m_volumeParams.volumeLoaded = true" << std::endl;
 
-
-
+    update();
 }
 
 void ExtdOpenGLwidget::sliderAction(int actID, double val)
@@ -667,5 +673,7 @@ void ExtdOpenGLwidget::sliderAction(int actID, double val)
         break;
     }
 
-update();
+    update();
 }
+
+

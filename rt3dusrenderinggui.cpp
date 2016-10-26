@@ -37,11 +37,17 @@ RT3DUSrenderingGUI::RT3DUSrenderingGUI(QWidget *parent) :
 
 RT3DUSrenderingGUI::~RT3DUSrenderingGUI()
 {
-    m_glwidget->close();
-    //m_glwidget->destroy();
-    delete m_glwidget;//->deleteLater();
+    m_glwidget->deleteLater();
     std::cout << "BYE" << std::endl;
     delete ui;
+}
+
+void RT3DUSrenderingGUI::closeEvent(QCloseEvent *event)
+{
+    event->accept();
+
+    m_glwidget->close();
+    m_glwidget->destroy();
 }
 
 void RT3DUSrenderingGUI::receiveMsg(QString msg)
@@ -116,22 +122,22 @@ void RT3DUSrenderingGUI::on_upperThreshSlider_valueChanged(int value)
 
 void RT3DUSrenderingGUI::on_transferoffsetSlider_valueChanged(int value)
 {
-    emit sliderAction(REND_SLIDER_TFR_OFF, value*0.1);
+    emit sliderAction(REND_SLIDER_TFR_OFF, value*0.05);
 }
 
 void RT3DUSrenderingGUI::on_transferScaleSlider_valueChanged(int value)
 {
-    emit sliderAction(REND_SLIDER_TFR_SCL, value*0.1);
+    emit sliderAction(REND_SLIDER_TFR_SCL, value*0.05);
 }
 
 void RT3DUSrenderingGUI::on_densitySlider_valueChanged(int value)
 {
-    emit sliderAction(REND_SLIDER_DEN, value*0.1);
+    emit sliderAction(REND_SLIDER_DEN, value*0.05);
 }
 
 void RT3DUSrenderingGUI::on_brightnessSlider_valueChanged(int value)
 {
-    emit sliderAction(REND_SLIDER_BRI, value*0.1);
+    emit sliderAction(REND_SLIDER_BRI, value*0.05);
 }
 
 void RT3DUSrenderingGUI::on_linFiltCheckBox_toggled(bool checked)

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QFileDialog>
+#include <QCloseEvent>
 #include "extdopenglwidget.h"
 
 namespace Ui {
@@ -16,6 +17,8 @@ class RT3DUSrenderingGUI : public QMainWindow
 public:
     explicit RT3DUSrenderingGUI(QWidget *parent = 0);
     ~RT3DUSrenderingGUI();
+
+    void closeEvent(QCloseEvent *event);
 
 signals:
     void sliderAction(int actID, double val);
