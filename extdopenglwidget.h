@@ -142,6 +142,7 @@ public:
 signals:
     void sendMsgToGUI(QString msg);
     void broadcastFPS(int FPS);
+    void updateGUIelement(int element, double value);
 
 public slots:
     void cleanup();

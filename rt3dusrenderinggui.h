@@ -26,6 +26,7 @@ signals:
 
 public slots:
     void receiveMsg(QString msg);
+    void receiveUpdate(int element, double value);
 
     void loadVolumeClicked();
 

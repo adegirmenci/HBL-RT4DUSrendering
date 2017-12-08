@@ -28,6 +28,8 @@ RT3DUSrenderingGUI::RT3DUSrenderingGUI(QWidget *parent) :
 
     connect(this, SIGNAL(sliderAction(int,double)),
             m_glwidget, SLOT(sliderAction(int,double)));
+    connect(m_glwidget, SIGNAL(updateGUIelement(int,double)),
+            this, SLOT(receiveUpdate(int,double)));
     connect(this, SIGNAL(loadVolume(QString)),
             m_glwidget, SLOT(loadVolume(QString)));
 
@@ -53,6 +55,50 @@ void RT3DUSrenderingGUI::closeEvent(QCloseEvent *event)
 void RT3DUSrenderingGUI::receiveMsg(QString msg)
 {
     ui->statusTextEdit->appendPlainText(msg);
+}
+
+void RT3DUSrenderingGUI::receiveUpdate(int element, double value)
+{
+    switch(element)
+    {
+    case REND_SLIDER_X:
+        ui->xRotSlider->setValue(static_cast<int>(round(value)));
+        break;
+
+    case REND_SLIDER_Y:
+        ui->yRotSlider->setValue(static_cast<int>(round(value)));
+        break;
+
+    case REND_SLIDER_Z:
+        ui->zRotSlider->setValue(static_cast<int>(round(value)));
+        break;
+
+    case REND_SLIDER_DEN:
+        ui->densitySlider->setValue(static_cast<int>(value));
+        break;
+
+    case REND_SLIDER_BRI:
+        ui->brightnessSlider->setValue(static_cast<int>(value));
+        break;
+
+    case REND_SLIDER_TFR_OFF:
+        ui->transferoffsetSlider->setValue(static_cast<int>(value));
+        break;
+
+    case REND_SLIDER_TFR_SCL:
+        ui->transferScaleSlider->setValue(static_cast<int>(value));
+        break;
+
+    case REND_SLIDER_LO_THRESH:
+        ui->lowerThreshSlider->setValue(static_cast<int>(value));
+        break;
+
+    case REND_SLIDER_LINFILT:
+        ui->linFiltCheckBox->setChecked(static_cast<bool>(value));
+
+    default:
+        break;
+    }
 }
 
 void RT3DUSrenderingGUI::serverStatusChanged(int status)
@@ -122,22 +168,22 @@ void RT3DUSrenderingGUI::on_upperThreshSlider_valueChanged(int value)
 
 void RT3DUSrenderingGUI::on_transferoffsetSlider_valueChanged(int value)
 {
-    emit sliderAction(REND_SLIDER_TFR_OFF, value*0.05);
+    emit sliderAction(REND_SLIDER_TFR_OFF, value*0.01);
 }
 
 void RT3DUSrenderingGUI::on_transferScaleSlider_valueChanged(int value)
 {
-    emit sliderAction(REND_SLIDER_TFR_SCL, value*0.05);
+    emit sliderAction(REND_SLIDER_TFR_SCL, value*0.01);
 }
 
 void RT3DUSrenderingGUI::on_densitySlider_valueChanged(int value)
 {
-    emit sliderAction(REND_SLIDER_DEN, value*0.05);
+    emit sliderAction(REND_SLIDER_DEN, value*0.01);
 }
 
 void RT3DUSrenderingGUI::on_brightnessSlider_valueChanged(int value)
 {
-    emit sliderAction(REND_SLIDER_BRI, value*0.05);
+    emit sliderAction(REND_SLIDER_BRI, value*0.01);
 }
 
 void RT3DUSrenderingGUI::on_linFiltCheckBox_toggled(bool checked)

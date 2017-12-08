@@ -336,70 +336,87 @@ void ExtdOpenGLwidget::keyPressEvent(QKeyEvent *_event)
         case Qt::Key_F:
             m_raytraceParams.linearFiltering = !m_raytraceParams.linearFiltering;
             setTextureFilterMode(m_raytraceParams.linearFiltering);
+            emit updateGUIelement(REND_SLIDER_LINFILT, m_raytraceParams.linearFiltering*1.0);
             break;
 
         case Qt::Key_Plus:
             m_raytraceParams.density += 0.01f;
+            emit updateGUIelement(REND_SLIDER_DEN, m_raytraceParams.density*100);
             break;
 
         case Qt::Key_Minus:
             m_raytraceParams.density -= 0.01f;
+            emit updateGUIelement(REND_SLIDER_DEN, m_raytraceParams.density*100);
             break;
 
         case Qt::Key_BracketRight:
             m_raytraceParams.brightness += 0.1f;
+            emit updateGUIelement(REND_SLIDER_BRI, m_raytraceParams.brightness*100);
             break;
 
         case Qt::Key_BracketLeft:
             m_raytraceParams.brightness -= 0.1f;
+            emit updateGUIelement(REND_SLIDER_BRI, m_raytraceParams.brightness*100);
             break;
 
         case Qt::Key_Apostrophe:
             m_raytraceParams.transferOffset += 0.01f;
+            emit updateGUIelement(REND_SLIDER_TFR_OFF, m_raytraceParams.transferOffset*100);
             break;
 
         case Qt::Key_Semicolon:
             m_raytraceParams.transferOffset -= 0.01f;
+            emit updateGUIelement(REND_SLIDER_TFR_OFF, m_raytraceParams.transferOffset*100);
             break;
 
         case Qt::Key_Period:
             m_raytraceParams.transferScale += 0.01f;
+            emit updateGUIelement(REND_SLIDER_TFR_SCL, m_raytraceParams.transferScale*100);
             break;
 
         case Qt::Key_Comma:
             m_raytraceParams.transferScale -= 0.01f;
+            emit updateGUIelement(REND_SLIDER_TFR_SCL, m_raytraceParams.transferScale*100);
             break;
 
         case Qt::Key_M:
             m_raytraceParams.lowerThresh += 0.01f;
+            emit updateGUIelement(REND_SLIDER_LO_THRESH, m_raytraceParams.lowerThresh*10);
             break;
 
         case Qt::Key_N:
             m_raytraceParams.lowerThresh -= 0.01f;
+            emit updateGUIelement(REND_SLIDER_LO_THRESH, m_raytraceParams.lowerThresh*10);
             break;
 
         case Qt::Key_A:
             m_viewportParams.viewRotation.z += 25 / 5.0f;
+            emit updateGUIelement(REND_SLIDER_Z, m_viewportParams.viewRotation.z);
             break;
 
         case Qt::Key_D:
             m_viewportParams.viewRotation.z -= 25 / 5.0f;
+            emit updateGUIelement(REND_SLIDER_Z, m_viewportParams.viewRotation.z);
             break;
 
         case Qt::Key_W:
             m_viewportParams.viewRotation.y += 25 / 5.0f;
+            emit updateGUIelement(REND_SLIDER_Y, m_viewportParams.viewRotation.y);
             break;
 
         case Qt::Key_S:
             m_viewportParams.viewRotation.y -= 25 / 5.0f;
+            emit updateGUIelement(REND_SLIDER_Y, m_viewportParams.viewRotation.y);
             break;
 
         case Qt::Key_Q:
             m_viewportParams.viewRotation.x += 25 / 5.0f;
+            emit updateGUIelement(REND_SLIDER_X, m_viewportParams.viewRotation.x);
             break;
 
         case Qt::Key_E:
             m_viewportParams.viewRotation.x -= 25 / 5.0f;
+            emit updateGUIelement(REND_SLIDER_X, m_viewportParams.viewRotation.x);
             break;
 
         default:
@@ -433,6 +450,10 @@ void ExtdOpenGLwidget::mouseMoveEvent(QMouseEvent *_event)
 
         m_viewportParams.viewRotation.x += dy / 5.0f;
         m_viewportParams.viewRotation.y += dx / 5.0f;
+
+        // TODO: this is not working as intended
+        emit updateGUIelement(REND_SLIDER_X, m_viewportParams.viewTranslation.x);
+        emit updateGUIelement(REND_SLIDER_Y, m_viewportParams.viewTranslation.y);
     }
 
     m_mouseParams.ox = _event->screenPos().x();
@@ -483,7 +504,7 @@ int ExtdOpenGLwidget::chooseCudaDevice(bool bUseOpenGL)
 {
     int result = -1;
 
-    int c = 1;
+    int c = 0;
     const char* dummy = "device";
 
     if (bUseOpenGL)
